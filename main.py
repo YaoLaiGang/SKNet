@@ -2,7 +2,7 @@ import os
 import torch
 from torch import nn
 from torch import optim
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 from dataset import MyDataset
 from resnext import ResNeXt
 from sknet import SKNet
