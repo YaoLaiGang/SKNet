@@ -12,8 +12,9 @@ from torch.optim import lr_scheduler
 # from train import train_epoch, test
 import argparse
 import json
+from balance_dataparal import BalancedDataParallel
 
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '1, 0'
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Trains ResNeXt on CIFAR', 
@@ -23,11 +24,11 @@ if __name__=="__main__":
     # parser.add_argument('dataset', type=str, choices=['cifar10', 'cifar100'], help='Choose between Cifar10/100.')
     # Optimization options
     parser.add_argument('--epochs', '-e', type=int, default=300, help='Number of epochs to train.')
-    parser.add_argument('--batch_size', '-b', type=int, default=32, help='Batch size.')
+    parser.add_argument('--batch_size', '-b', type=int, default=18, help='Batch size.')
     parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='The Learning Rate.')
     # parser.add_argument('--momentum', '-m', type=float, default=0.9, help='Momentum.')
     parser.add_argument('--decay', '-d', type=float, default=1e-3, help='Weight decay (L2 penalty).')
-    parser.add_argument('--test_bs', type=int, default=32)
+    parser.add_argument('--test_bs', type=int, default=3)
     # parser.add_argument('--schedule', type=int, nargs='+', default=[150, 225],
     #                     help='Decrease learning rate at these epochs.')
     # parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
@@ -42,9 +43,11 @@ if __name__=="__main__":
     # parser.add_argument('--widen_factor', type=int, default=4, help='Widen factor. 4 -> 64, 8 -> 128, ...')
     # Acceleration
     parser.add_argument('--ngpu', type=int, default=1, help='0 = CPU.')
-    parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
+    parser.add_argument('--prefetch', type=int, default=16, help='Pre-fetching threads.')
     # i/o
     parser.add_argument('--log', type=str, default='./log', help='Log folder.')
+    # mutil Gpu
+    # parser.add_argument('--local_rank', type=int)
     args = parser.parse_args()
 
     # Init logger
@@ -88,9 +91,9 @@ if __name__=="__main__":
     net.apply(weights_init) #apply函数会递归地搜索网络内的所有module并把参数表示的函数应用到所有的module上。  
                 #对所有的Conv层都初始化权重. 
 
-    net.cuda()
+    net = BalancedDataParallel(8, net, dim=0).cuda()
     optimizer = optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2, betas=(0.9, 0.999))
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
     # criterion = nn.MSELoss().cuda()
 
 #######################TRAIN TEST FUNCTION########################################################################
@@ -99,7 +102,7 @@ if __name__=="__main__":
     def train():
         net.train()
         loss_avg = 0.0
-        for stpe, (img, _, y) in enumerate(train_loader):
+        for step, (img, _, y) in enumerate(train_loader):
             img, y = img.cuda(), y.cuda()
 
             # forward
@@ -114,6 +117,8 @@ if __name__=="__main__":
             # exponential moving average
             loss_avg += loss.item()
 
+            if step % 50 == 0:
+                print("step {}, loss {}".format(step, loss.item()))
         state['train_loss'] = loss_avg / len(train_loader)
 
 
@@ -148,9 +153,11 @@ if __name__=="__main__":
         #     param_group['lr'] = current_lr
         state['learning_rate'] = scheduler.get_last_lr()
         state["epoch"] = epoch
+        print("=============epoch {}================".format(epoch))
         train()
         test()
         scheduler.step()
+        print("epoch: {}, loss is: {}, test is :{}".format(epoch, state["train_loss"], state["test_loss"]))
         if state["distance"] < best_distance:
             best_distance = state["distance"]
             torch.save(net.state_dict(), os.path.join(args.save, 'model_{}.pytorch'.format(best_distance)))

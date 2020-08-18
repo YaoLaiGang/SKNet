@@ -212,7 +212,7 @@ class SKNet50(nn.Module):
         return fea
 
 if __name__=='__main__':
-    x = torch.rand(8, 18, 25, 25)
+    x = torch.rand(2, 18, 25, 25)
     net = SKNet50()
     out = net(x)
     print(out.shape)
