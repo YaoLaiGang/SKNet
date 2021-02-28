@@ -135,8 +135,8 @@ if __name__=="__main__":
             # test loss average
             loss_avg += loss.item()
 
-        state['test_loss'] = loss_avg / len(test_loader)
-        state['distance'] = distance / len(test_loader)
+        state['test_loss'] = loss_avg / len(valid_loader))
+        state['distance'] = distance / len(valid_loader)
 
 #####################TRAIN TEST FUNCTION################################################################################
 
