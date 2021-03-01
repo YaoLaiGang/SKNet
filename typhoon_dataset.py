@@ -7,7 +7,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 class TyphoonDataset(Dataset):
-    def __init__(self, mode="train", root_path="/home/qiao/TyphoonDatasets"):
+    def __init__(self, mode="train", root_path="../TyphoonDatasets"):
         super(TyphoonDataset, self).__init__()
         if mode == "train":
             img_file_path = os.path.join(root_path, "img_train.npy")
