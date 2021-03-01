@@ -27,7 +27,7 @@ if __name__=="__main__":
     parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='The Learning Rate.')
     # parser.add_argument('--momentum', '-m', type=float, default=0.9, help='Momentum.')
     parser.add_argument('--decay', '-d', type=float, default=1e-3, help='Weight decay (L2 penalty).')
-    parser.add_argument('--test_bs', type=int, default=32)
+    parser.add_argument('--test_bs', type=int, default=16)
     # parser.add_argument('--schedule', type=int, nargs='+', default=[150, 225],
     #                     help='Decrease learning rate at these epochs.')
     # parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
@@ -108,6 +108,7 @@ if __name__=="__main__":
             # backward
             optimizer.zero_grad()
             loss = F.mse_loss(output, y)
+            del output
             loss.backward()
             optimizer.step()
 
@@ -128,10 +129,11 @@ if __name__=="__main__":
             # forward
             output = net(img)
             loss = F.mse_loss(output, y)
+            del output
 
             # distance
             dealt = torch.pow(output - y, 2)
-            distance += torch.sqrt(torch.sum(dealt, 0))
+            distance += torch.sqrt(torch.sum(dealt, 0)).item()
             # test loss average
             loss_avg += loss.item()
 
