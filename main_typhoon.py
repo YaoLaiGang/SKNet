@@ -129,10 +129,10 @@ if __name__=="__main__":
             # forward
             output = net(img)
             loss = F.mse_loss(output, y)
-            del output
 
             # distance
             dealt = torch.pow(output - y, 2)
+            del output
             distance += torch.sqrt(torch.sum(dealt, 0)).item()
             # test loss average
             loss_avg += loss.item()
