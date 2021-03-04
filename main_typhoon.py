@@ -90,7 +90,8 @@ if __name__=="__main__":
 
     net.cuda()
     optimizer = optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2, betas=(0.9, 0.999))
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=3, factor=0.9)
     # criterion = nn.MSELoss().cuda()
 
 #######################TRAIN TEST FUNCTION########################################################################
@@ -133,7 +134,7 @@ if __name__=="__main__":
             # distance
             dealt = torch.pow(output - y, 2)
             del output
-            distance += torch.sqrt(torch.sum(dealt, 0)).item()
+            distance += torch.sqrt(torch.sum(torch.sum(dealt, 0))).item()/2.0
             # test loss average
             loss_avg += loss.item()
 
@@ -152,7 +153,7 @@ if __name__=="__main__":
         state["epoch"] = epoch
         train()
         test()
-        scheduler.step()
+        scheduler.step(state['test_loss'])
         if state["distance"] < best_distance:
             best_distance = state["distance"]
             torch.save(net.state_dict(), os.path.join(args.save, 'model_{}.pytorch'.format(best_distance)))
