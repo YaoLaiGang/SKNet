@@ -133,7 +133,7 @@ if __name__=="__main__":
             # distance
             dealt = torch.pow(output - y, 2)
             del output
-            distance += torch.sqrt(torch.sum(dealt, 0)).item()
+            distance += torch.sqrt(torch.sum(torch.sum(dealt.cpu(), 0))).item()/2.0
             # test loss average
             loss_avg += loss.item()
 
