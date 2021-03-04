@@ -149,7 +149,7 @@ if __name__=="__main__":
         # current_lr = lr0 / 2**int(epoch/50)
         # for param_group in optimizer.param_groups:
         #     param_group['lr'] = current_lr
-        state['learning_rate'] = scheduler.get_last_lr()
+        state['learning_rate'] = optimizer.param_groups[0]['lr']
         state["epoch"] = epoch
         train()
         test()
