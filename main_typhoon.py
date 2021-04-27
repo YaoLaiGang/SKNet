@@ -6,8 +6,9 @@ import torch.nn.functional as F
 from torch.nn import init
 # from tensorboardX import SummaryWriter
 from typhoon_dataset import TyphoonDataset
-from resnext import ResNeXt
-from sknet_typhoon import SKNet, SKNet50
+# from resnext import ResNeXt
+# from sknet_typhoon import SKNet, SKNet50
+from sknet_self_typhoon import SKNet50_Pure, SKNet50
 from torch.optim import lr_scheduler
 # from train import train_epoch, test
 import argparse
@@ -56,8 +57,9 @@ if __name__=="__main__":
 
     # train valid split
     dataset = TyphoonDataset(mode="train")
-    train_size = int(0.8 * len(dataset))
+    train_size = int(0.9 * len(dataset))
     test_size = len(dataset) - train_size
+    torch.manual_seed(0)
     train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, 
                                                                         num_workers=args.prefetch, pin_memory=False)
@@ -68,15 +70,15 @@ if __name__=="__main__":
     if not os.path.isdir(args.save):
         os.makedirs(args.save)
 
-     # Init model, criterion, and optimizer
-    # net = ResNeXt(10)
+    # Init model, criterion, and optimizer
     net = SKNet50()
 
     # weight init
     #define the initial function to init the layer's parameters for the network
     def weights_init(m):
         if isinstance(m, nn.Conv2d):
-            init.xavier_uniform_(m.weight.data)
+            init.kaiming_normal_(m.weight.data)
+            # init.xavier_uniform_(m.weight.data)
             init.constant_(m.bias.data,0.1)
         elif isinstance(m, nn.BatchNorm2d):
             m.weight.data.fill_(1)
@@ -85,13 +87,18 @@ if __name__=="__main__":
             m.weight.data.normal_(0,0.01)
             m.bias.data.zero_()
 
-    net.apply(weights_init) #apply函数会递归地搜索网络内的所有module并把参数表示的函数应用到所有的module上。  
+    if(args.load!=None):
+        net.load_state_dict(torch.load(args.load))
+    else:
+        net.apply(weights_init) #apply函数会递归地搜索网络内的所有module并把参数表示的函数应用到所有的module上。  
                 #对所有的Conv层都初始化权重. 
+        net.spical_init() # 只针对加入NonLocalBlock的网络
 
     net.cuda()
-    optimizer = optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2, betas=(0.9, 0.999))
+    optimizer = optim.AdamW(net.parameters(), lr=args.learning_rate, weight_decay=1e-2, betas=(0.9, 0.999))
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=3, factor=0.9)
+    # scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=5,T_mult=2)
     # criterion = nn.MSELoss().cuda()
 
 #######################TRAIN TEST FUNCTION########################################################################
@@ -132,9 +139,10 @@ if __name__=="__main__":
             loss = F.mse_loss(output, y)
 
             # distance
-            dealt = torch.pow(output - y, 2)
+            length = y.shape[0]
+            dealt = torch.pow((output-y), 2)
             del output
-            distance += torch.sqrt(torch.sum(torch.sum(dealt.cpu(), 0))).item()/2.0
+            distance += torch.sum(torch.sqrt(torch.sum(dealt.cpu(), dim=1))).item() / length
             # test loss average
             loss_avg += loss.item()
 
@@ -154,6 +162,7 @@ if __name__=="__main__":
         train()
         test()
         scheduler.step(state['test_loss'])
+        # scheduler.step()
         if state["distance"] < best_distance:
             best_distance = state["distance"]
             torch.save(net.state_dict(), os.path.join(args.save, 'model_{}.pytorch'.format(best_distance)))
