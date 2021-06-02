@@ -156,7 +156,7 @@ class SKNet(nn.Module):
             nn.ReLU(),
             SKUnit(512, 512, 32, 2, 8, 2),
             nn.ReLU(),
-            SKUnit(512, 512, 32, 2, 8, 2),
+            SKUnit(512, 512, 32, 2, 8, 2, nl=True),
             nn.ReLU()
         ) # 12×12
         self.stage_3 = nn.Sequential(
@@ -164,7 +164,7 @@ class SKNet(nn.Module):
             nn.ReLU(),
             SKUnit(1024, 1024, 32, 2, 8, 2),
             nn.ReLU(),
-            SKUnit(1024, 1024, 32, 2, 8, 2),
+            SKUnit(1024, 1024, 32, 2, 8, 2, nl=True),
             nn.ReLU()
         ) # 6×6
         self.pool = nn.AvgPool2d(6)
@@ -172,6 +172,10 @@ class SKNet(nn.Module):
             nn.Linear(1024, 2),
             # nn.Softmax(dim=1)
         )
+    
+    def spical_init(self):
+        self.stage_2[4].spical_init()
+        self.stage_3[4].spical_init()
 
     def forward(self, x):
         fea = self.basic_conv(x)
@@ -267,21 +271,21 @@ class SKNet50(nn.Module):
             nn.BatchNorm2d(64)
         ) # 25×25
         self.stage_1 = nn.Sequential(
-            SKUnit(64, 256, 32, 2, 32, 2, stride=1),
+            SKUnit(64, 256, 32, 2, 32, 2, stride=1, nl=False),
             nn.ReLU(),
-            SKUnit(256, 256, 32, 2, 32, 2),
+            SKUnit(256, 256, 32, 2, 32, 2, nl=False),
             nn.ReLU(),
-            SKUnit(256, 256, 32, 2, 32, 2),
+            SKUnit(256, 256, 32, 2, 32, 2, nl=False),
             nn.ReLU()
         ) # 25×25
         self.stage_2 = nn.Sequential(
-            SKUnit(256, 512, 32, 2, 32, 2, stride=2),
+            SKUnit(256, 512, 32, 2, 32, 2, stride=2, nl=False),
             nn.ReLU(),
-            SKUnit(512, 512, 32, 2, 32, 2, nl=True),
+            SKUnit(512, 512, 32, 2, 32, 2, nl=False),
             nn.ReLU(),
-            SKUnit(512, 512, 32, 2, 32, 2),
+            SKUnit(512, 512, 32, 2, 32, 2, nl=False),
             nn.ReLU(),
-            SKUnit(512, 512, 32, 2, 32, 2, nl=True),
+            SKUnit(512, 512, 32, 2, 32, 2, nl=False),
             nn.ReLU()
         ) # 12×12
         self.stage_3 = nn.Sequential(
@@ -289,11 +293,11 @@ class SKNet50(nn.Module):
             nn.ReLU(),
             SKUnit(1024, 1024, 32, 2, 32, 2),
             nn.ReLU(),
-            SKUnit(1024, 1024, 32, 2, 32, 2),
+            SKUnit(1024, 1024, 32, 2, 32, 2, nl=True),
             nn.ReLU(),
             SKUnit(1024, 1024, 32, 2, 32, 2, nl=True),
             nn.ReLU(),
-            SKUnit(1024, 1024, 32, 2, 32, 2),
+            SKUnit(1024, 1024, 32, 2, 32, 2, nl=True),
             nn.ReLU(),
             SKUnit(1024, 1024, 32, 2, 32, 2, nl=True),
             nn.ReLU(),
@@ -316,11 +320,16 @@ class SKNet50(nn.Module):
             # nn.Softmax(dim=1)
         )
     def spical_init(self):
-        self.stage_2[2].spical_init()
-        self.stage_2[6].spical_init()
+        # self.stage_1[0].spical_init()
+        # self.stage_1[2].spical_init()
+        # self.stage_1[4].spical_init()
+        # self.stage_2[2].spical_init()
+        # self.stage_2[4].spical_init()
+        # self.stage_2[6].spical_init()
+        self.stage_3[4].spical_init()
         self.stage_3[6].spical_init()
+        self.stage_3[8].spical_init()
         self.stage_3[10].spical_init()
-        # self.stage_3[14].spical_init()
 
     def forward(self, x):
         fea = self.basic_conv(x)
@@ -330,6 +339,7 @@ class SKNet50(nn.Module):
         fea = self.stage_4(fea)
         fea = self.pool(fea)
         fea = torch.squeeze(fea)
+        # mid_fea = fea
         fea = self.classifier(fea)
         return fea
 

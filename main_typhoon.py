@@ -4,11 +4,11 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 from torch.nn import init
-# from tensorboardX import SummaryWriter
+from torch.utils import data
 from typhoon_dataset import TyphoonDataset
-# from resnext import ResNeXt
-# from sknet_typhoon import SKNet, SKNet50
-from sknet_self_typhoon import SKNet50_Pure, SKNet50
+from resnext import ResNeXt50
+from senet import SENet50
+from sknet_self_typhoon import SKNet50_Pure, SKNet50, SKNet
 from torch.optim import lr_scheduler
 # from train import train_epoch, test
 import argparse
@@ -85,7 +85,8 @@ if __name__=="__main__":
             m.bias.data.zero_()
         elif isinstance(m, nn.Linear):
             m.weight.data.normal_(0,0.01)
-            m.bias.data.zero_()
+            if hasattr(m, "bias"):
+                m.bias.data.zero_()
 
     if(args.load!=None):
         net.load_state_dict(torch.load(args.load))

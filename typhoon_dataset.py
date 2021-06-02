@@ -4,7 +4,8 @@
 '''
 import os
 import numpy as np
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, dataset
+import torch
 
 class TyphoonDataset(Dataset):
     def __init__(self, mode="train", root_path="../TyphoonDatasets"):
@@ -27,10 +28,10 @@ class TyphoonDataset(Dataset):
     def __getitem__(self, index):
         return self.img[index, :, :].astype(np.float32), self.trace[index, :].astype(np.float32), self.output[index, :].astype(np.float32)
 
+
 if __name__ == "__main__":
     dataset = TyphoonDataset(mode="train")
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, 
-                                                                        num_workers=args.prefetch, pin_memory=True)
+    print(dataset[0][0].shape)
+    #train_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.prefetch, pin_memory=True)
     # for (img, _, y) in enumerate(train_loader):
-        
     pass
